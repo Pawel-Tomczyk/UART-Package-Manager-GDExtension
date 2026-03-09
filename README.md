@@ -79,7 +79,20 @@ func _exit_tree() -> void:
         uart.close_port()
 ```
 
-## Build from Source
+## Installation
+
+### Option 1: Download Pre-built Release (Recommended)
+
+Download the latest `uartmanager.zip` from the [Releases](https://github.com/Pawel-Tomczyk/UART-Package-GDExtension/releases) page.
+
+1. Extract the `uartmanager` folder from the zip
+2. Copy it into your Godot project
+3. Restart Godot to load the extension
+4. You can now use `UartManager` in your scripts
+
+The release includes pre-compiled binaries for Linux, Windows, and macOS.
+
+### Option 2: Build from Source
 
 ### Requirements
 
@@ -122,7 +135,9 @@ python3 setup.py
 
 Then choose `4` to compile a debug build.
 
-## Using in a Godot Project
+### Using Your Built Extension in a Godot Project
+
+After building:
 
 1. Copy the `uartmanager` extension folder (including `uartmanager.gdextension` and `bin/`) into your Godot project.
 2. Ensure paths in `uartmanager.gdextension` match your shipped binaries.
