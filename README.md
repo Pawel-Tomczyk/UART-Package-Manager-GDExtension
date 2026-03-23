@@ -53,7 +53,13 @@ You cannot add a new C++ `struct` at runtime (that always needs recompilation), 
 
 This repository includes a helper codec:
 
-- `test_project/uart_packet_codec.gd`
+- `test_project/uartmanager/uart_packet_codec.gd`
+
+When used in a Godot project, preload it as:
+
+```gdscript
+const UartPacketCodec = preload("res://uartmanager/uart_packet_codec.gd")
+```
 
 Example for runtime IMU packet (`id = 0x20`):
 
