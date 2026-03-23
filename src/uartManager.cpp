@@ -30,25 +30,48 @@ bool UartManager::openPort(godot::String port_name, int baudrate) {
     // ==========================================
     // KOD DLA WINDOWSA (ten, który już widziałeś)
     // ==========================================
-    godot::String full_port_name = "\\\\.\\" + port_name;
+    godot::String full_port_name = port_name;
+    if (!port_name.begins_with("\\\\.\\")) {
+        full_port_name = "\\\\.\\" + port_name;
+    }
+
     hSerial = CreateFileA(full_port_name.utf8().get_data(), GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
-    if (hSerial == INVALID_SERIAL_HANDLE) return false;
+    if (hSerial == INVALID_SERIAL_HANDLE) {
+        godot::UtilityFunctions::print("Nie udalo sie otworzyc portu (Windows): ", port_name, ", GetLastError=", (int)GetLastError());
+        return false;
+    }
 
     DCB dcb = {0};
     dcb.DCBlength = sizeof(dcb);
-    GetCommState(hSerial, &dcb);
+    if (!GetCommState(hSerial, &dcb)) {
+        godot::UtilityFunctions::print("GetCommState nie powiodl sie, GetLastError=", (int)GetLastError());
+        CloseHandle(hSerial);
+        hSerial = INVALID_SERIAL_HANDLE;
+        return false;
+    }
+
     dcb.BaudRate = baudrate;
     dcb.ByteSize = 8;
     dcb.StopBits = ONESTOPBIT;
     dcb.Parity = NOPARITY;
-    SetCommState(hSerial, &dcb);
+    if (!SetCommState(hSerial, &dcb)) {
+        godot::UtilityFunctions::print("SetCommState nie powiodl sie, GetLastError=", (int)GetLastError());
+        CloseHandle(hSerial);
+        hSerial = INVALID_SERIAL_HANDLE;
+        return false;
+    }
 
     COMMTIMEOUTS timeouts = {0};
     timeouts.ReadIntervalTimeout = 50;
     timeouts.ReadTotalTimeoutConstant = 50;
     timeouts.ReadTotalTimeoutMultiplier = 10;
-    SetCommTimeouts(hSerial, &timeouts);
+    if (!SetCommTimeouts(hSerial, &timeouts)) {
+        godot::UtilityFunctions::print("SetCommTimeouts nie powiodl sie, GetLastError=", (int)GetLastError());
+        CloseHandle(hSerial);
+        hSerial = INVALID_SERIAL_HANDLE;
+        return false;
+    }
 
 #else
     // ==========================================
@@ -202,12 +225,12 @@ void UartManager::threadLoop() {
 bool UartManager::send_packet(int id, godot::PackedByteArray data) {
     if (hSerial == INVALID_SERIAL_HANDLE) return false;
 
-    UartPacket pkt;
+    UartPacket pkt = {};
     pkt.id = id;
     int dataLength = data.size();
     
     // Zabezpieczenie przed przepełnieniem
-    if (pkt.length > 255) pkt.length  = 255;
+    if (dataLength > 255) pkt.length  = 255;
     else pkt.length = uint8_t(dataLength);
     
     for (int i = 0; i < pkt.length; i++) {
@@ -220,7 +243,10 @@ bool UartManager::send_packet(int id, godot::PackedByteArray data) {
     // WYSYŁKA (Wieloplatformowo)
 #ifdef _WIN32
     DWORD bytesWritten;
-    WriteFile(hSerial, raw_buffer, total_size, &bytesWritten, NULL);
+    if (!WriteFile(hSerial, raw_buffer, total_size, &bytesWritten, NULL)) {
+        godot::UtilityFunctions::print("WriteFile nie powiodl sie, GetLastError=", (int)GetLastError());
+        return false;
+    }
     return bytesWritten == total_size;
 #else
     int bytesWritten = write(hSerial, raw_buffer, total_size);

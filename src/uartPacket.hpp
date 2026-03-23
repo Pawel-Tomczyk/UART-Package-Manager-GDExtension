@@ -2,12 +2,21 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 
 
 #define START_BYTE_1 0xAB // start byte, used to identify the beginning of a packet, helps to synchronize the communication and avoid reading garbage data
 #define START_BYTE_2 0xCD // second start byte, used to further ensure that we are reading a valid packet, reduces the chances of false positives when looking for the start of a packet
 
-struct __attribute__((packed)) UartPacket
+#if defined(_MSC_VER)
+// MSVC does not support __attribute__((packed)); pack all protocol structs in this header.
+#pragma pack(push, 1)
+#define UART_PACKET_PACKED
+#else
+#define UART_PACKET_PACKED __attribute__((packed))
+#endif
+
+struct UART_PACKET_PACKED UartPacket
 {
     uint8_t id;  // command id, used to identify the type of command
     uint8_t length;    // length of the data, used to know how many bytes to read for the data
@@ -60,14 +69,18 @@ unsigned int makePacket(const T& dataStruct, uint8_t *outputBuffer) {
 
 namespace Packets {
     // Every template HAVE TO contain 'static const uint8_t id'
-    struct __attribute__((packed)) Heartbeat {
+    struct UART_PACKET_PACKED Heartbeat {
         static const uint8_t id = 0x00;
         uint32_t uptime_ms;
         uint8_t status_code;
     };
 
-    struct __attribute__((packed)) MsgTest {
+    struct UART_PACKET_PACKED MsgTest {
         static const uint8_t id = 0x01;
         char message[20];
     };
 };
+
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
