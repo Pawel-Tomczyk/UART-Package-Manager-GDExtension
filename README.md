@@ -47,6 +47,39 @@ Packet format used by `send_packet` and parser:
 - `DATA`: `LEN` bytes
 - `CHECKSUM`: XOR of `ID ^ LEN ^ each(DATA byte)`
 
+## Custom Packets Without Recompiling
+
+You cannot add a new C++ `struct` at runtime (that always needs recompilation), but you can define packet layout in GDScript and serialize/deserialize to `PackedByteArray`.
+
+This repository includes a helper codec:
+
+- `test_project/uart_packet_codec.gd`
+
+Example for runtime IMU packet (`id = 0x20`):
+
+```gdscript
+const PKT_IMU_DATA := 0x20
+
+func send_imu(uart: UartManager) -> void:
+    var payload := UartPacketCodec.pack_by_schema(
+        {"x": 1.0, "y": 2.0, "z": 3.0, "mag": 4.0},
+        UartPacketCodec.IMU_SCHEMA,
+        true # big_endian
+    )
+    uart.send_packet(PKT_IMU_DATA, payload)
+
+func _on_packet_received(id: int, data: PackedByteArray) -> void:
+    if id == PKT_IMU_DATA:
+        var imu := UartPacketCodec.unpack_by_schema(data, UartPacketCodec.IMU_SCHEMA, true)
+        print("IMU:", imu)
+```
+
+Important:
+
+- Both sides (Godot and MCU/PC peer) must use the same schema order and numeric types.
+- Both sides must use the same endianness (`big_endian=true` in the example).
+- `double` in your C++ idea maps to `f64` in the schema.
+
 ## Quick Start in GDScript
 
 ```gdscript
